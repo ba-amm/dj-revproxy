@@ -133,7 +133,7 @@ def proxy_request(request, **kwargs):
         proxied_url = "%s?%s" % (proxied_url, qs)
 
     # fix headers@
-    headers = headers or {}
+    headers_to_send = {}
     for key, value in request.META.iteritems():
         if key.startswith('HTTP_'):
             key = header_name(key)
@@ -146,10 +146,14 @@ def proxy_request(request, **kwargs):
 
         # rewrite location
         if key.lower() != "host" and not is_hop_by_hop(key):
-            headers[key] = value
+            headers_to_send[key] = value
+
+    for key, value in headers.iteritems():
+        # Overwrite any request headers with those passed in arguments
+        headers_to_send[key] = value
 
     # we forward for
-    headers["X-Forwarded-For"] = request.get_host()
+    headers_to_send["X-Forwarded-For"] = request.get_host()
 
     # django doesn't understand PUT sadly
     method = request.method.upper()
@@ -159,7 +163,7 @@ def proxy_request(request, **kwargs):
     # do the request
     try:
         resp = restkit.request(proxied_url, method=method,
-                body=request.raw_post_data, headers=headers,
+                body=request.raw_post_data, headers=headers_to_send,
                 follow_redirect=True,
                 decompress=decompress,
                 filters=filters)
