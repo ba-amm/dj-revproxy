@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -
 #
-# This file is part of dj-revproxy released under the MIT license. 
+# This file is part of dj-revproxy released under the MIT license.
 # See the NOTICE for more information.
 
 from __future__ import with_statement
@@ -10,10 +10,8 @@ from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse, Http404, HttpResponsePermanentRedirect
 import restkit
-from restkit.globals import set_manager
-from restkit.manager import Manager
 
-      	
+
 _hop_headers = {
     'connection':1, 'keep-alive':1, 'proxy-authenticate':1,
     'proxy-authorization':1, 'te':1, 'trailers':1, 'transfer-encoding':1,
@@ -31,28 +29,6 @@ rewrite_location, import_conn_manager, absolute_uri
 from .filters import RewriteBase
 from .store import RequestStore
 
-_conn_manager = None
-def set_conn_manager():
-    global _conn_manager
-
-    nb_connections = getattr(settings, 'REVPROXY_NB_CONNECTIONS', 10)
-    timeout = getattr(settings, 'REVPROXY_TIMEOUT', 150)
-
-    
-    conn_manager_uri = getattr(settings, 'REVPROXY_CONN_MGR', None)
-    if not conn_manager_uri:
-        
-        klass = Manager
-    else:
-        klass = import_conn_manager(conn_manager_uri)
-    _conn_manager = klass(max_conn=nb_connections, timeout=timeout)
-
-def get_conn_manager():
-    global _conn_manager
-    if not _conn_manager:
-        set_conn_manager()
-    return _conn_manager
-
 
 class HttpResponseBadGateway(HttpResponse):
     status_code = 502
@@ -67,7 +43,7 @@ def proxy_request(request, **kwargs):
         destination: string, the proxied url
         prefix: string, the prrefix behind we proxy the path
         headers: dict, custom HTTP headers
-        no_redirect: boolean, False by default, do not redirect to "/" 
+        no_redirect: boolean, False by default, do not redirect to "/"
             if no path is given
         decompress: boolean, False by default. If true the proxy will
             decompress the source body if it's gzip encoded.
@@ -93,11 +69,11 @@ def proxy_request(request, **kwargs):
         sid = uuid.uuid4().hex
     kwargs['proxy_sid'] = sid
 
-    
+
     # install request filters
     filters_classes = kwargs.get('filters')
     if not filters_classes:
-        filters = None 
+        filters = None
     else:
         filters = []
         for fclass in filters_classes:
@@ -116,7 +92,7 @@ def proxy_request(request, **kwargs):
 
                     if extra_kwargs is not None:
                         kwargs.update(extra_kwargs)
-    
+
 
     destination = kwargs.get('destination')
     prefix = kwargs.get('prefix')
@@ -143,7 +119,7 @@ def proxy_request(request, **kwargs):
             prefix = request.path.rsplit(path, 1)[0]
 
     if not path.startswith("/"):
-        path = "/%s" % path 
+        path = "/%s" % path
 
     base_url = absolute_uri(request, destination)
     proxied_url = ""
@@ -161,13 +137,13 @@ def proxy_request(request, **kwargs):
     for key, value in request.META.iteritems():
         if key.startswith('HTTP_'):
             key = header_name(key)
-            
+
         elif key in ('CONTENT_TYPE', 'CONTENT_LENGTH'):
             key = key.replace('_', '-')
             if not value: continue
         else:
             continue
-    
+
         # rewrite location
         if key.lower() != "host" and not is_hop_by_hop(key):
             headers[key] = value
@@ -179,7 +155,7 @@ def proxy_request(request, **kwargs):
     method = request.method.upper()
     if method == "PUT":
         coerce_put_post(request)
-       
+
     # do the request
     try:
         resp = restkit.request(proxied_url, method=method,
@@ -189,7 +165,7 @@ def proxy_request(request, **kwargs):
                 filters=filters)
     except restkit.RequestFailed, e:
         msg = getattr(e, 'msg', '')
-    
+
         if e.status_int >= 100:
             resp = e.response
             body = msg
@@ -212,10 +188,10 @@ def proxy_request(request, **kwargs):
                 response[k] = v
         else:
             response[k] = v
-    
-    # save the session 
+
+    # save the session
     response.set_cookie(
-            cookie_name, 
+            cookie_name,
             sid,
             max_age=None,
             expires=None,
@@ -283,15 +259,15 @@ class RevProxy(object):
 
         if path is None:
             idx =  request.path.find(prefix)
-            pos = idx + len(prefix) 
+            pos = idx + len(prefix)
             path = request.path[pos:]
-        
+
         prefix_path = path and request.path.split(path)[0] or request.path
         destination = proxied_urls.get(prefix)
-       
+
         kwargs.update(destination.kwargs)
 
         return proxy_request(request, destination.url, prefix=prefix_path,
                 **kwargs)
-        
+
 site_proxy = RevProxy()
