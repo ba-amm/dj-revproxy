@@ -148,9 +148,10 @@ def proxy_request(request, **kwargs):
         if key.lower() != "host" and not is_hop_by_hop(key):
             headers_to_send[key] = value
 
-    for key, value in headers.iteritems():
-        # Overwrite any request headers with those passed in arguments
-        headers_to_send[key] = value
+    if headers:
+        for key, value in headers.iteritems():
+            # Overwrite any request headers with those passed in arguments
+            headers_to_send[key] = value
 
     # we forward for
     headers_to_send["X-Forwarded-For"] = request.get_host()
