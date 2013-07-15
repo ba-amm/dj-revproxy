@@ -22,7 +22,8 @@ def is_hop_by_hop(header_name):
     """Return true if 'header_name' is an HTTP/1.1 "Hop-by-Hop" header"""
     return header_name.lower() in _hop_headers
 
-restkit.set_logging("debug")
+# TODO: should set this as configurable by caller
+restkit.set_logging("error")
 
 from .util import absolute_uri, header_name, coerce_put_post, \
 rewrite_location, import_conn_manager, absolute_uri
