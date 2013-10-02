@@ -165,7 +165,7 @@ def proxy_request(request, **kwargs):
     # do the request
     try:
         resp = restkit.request(proxied_url, method=method,
-                body=request.raw_post_data, headers=headers_to_send,
+                body=request.body, headers=headers_to_send,
                 follow_redirect=True,
                 decompress=decompress,
                 filters=filters)
