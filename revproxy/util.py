@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -
 #
-# This file is part of dj-revproxy released under the MIT license. 
+# This file is part of dj-revproxy released under the MIT license.
 # See the NOTICE for more information.
 
 import sys
 
 import posixpath
 from urlparse import urljoin, urlparse, urlunparse
-from django.http import absolute_http_url_re
+try:
+    from django.http import absolute_http_url_re
+except ImportError:
+    from django.http.request import absolute_http_url_re
 
 def absolute_uri(request, base_url):
     if not absolute_http_url_re.match(base_url):
@@ -15,7 +18,7 @@ def absolute_uri(request, base_url):
             base_url = base_url[1:]
 
         return '%s://%s/%s' %  (
-                request.is_secure() and 'https' or 'http', 
+                request.is_secure() and 'https' or 'http',
                 request.get_host(), base_url)
     return base_url
 
@@ -30,7 +33,7 @@ def header_name(name):
     words = name[5:].split('_')
     for i in range(len(words)):
         words[i] = words[i][0].upper() + words[i][1:].lower()
-        
+
     result = '-'.join(words)
     return result
 
@@ -54,7 +57,7 @@ def coerce_put_post(request):
             request.META['REQUEST_METHOD'] = 'POST'
             request._load_post_and_files()
             request.META['REQUEST_METHOD'] = 'PUT'
-            
+
         request.PUT = request.POST
 
 def rewrite_location(request, prefix_path, location):
@@ -68,7 +71,7 @@ def rewrite_location(request, prefix_path, location):
                 request.get_host(), prefix_path)
         return  urljoin(proxy_uri, location)
     elif url.scheme == scheme or url.netloc == request.get_host():
-        return urlunparse((scheme, request.get_host(), 
+        return urlunparse((scheme, request.get_host(),
             prefix_path + url.path, url.params, url.query, url.fragment))
     return location
 
@@ -84,7 +87,7 @@ def import_conn_manager(module):
         if module.endswith(".py") and os.path.exists(module):
             raise ImportError("Failed to find manager, did "
                 "you mean '%s:%s'?" % (module.rsplit(".",1)[0], obj))
-    
+
     mod = sys.modules[module]
     mgr = eval(obj, mod.__dict__)
     if mgr is None:

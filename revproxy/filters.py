@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -
 #
-# This file is part of dj-revproxy released under the MIT license. 
+# This file is part of dj-revproxy released under the MIT license.
 # See the NOTICE for more information.
 
 # etree object
@@ -12,8 +12,11 @@ try:
 except ImportError:
     from StringIO import StringIO
 
+try:
+    from django.http import absolute_http_url_re
+except ImportError:
+    from django.http.request import absolute_http_url_re
 
-from django.http import absolute_http_url_re
 try:
     from lxml import etree
     import lxml.html
@@ -25,7 +28,7 @@ except ImportError:
 
 from revproxy.util import normalize
 
-HTML_CTYPES = ( 
+HTML_CTYPES = (
     "text/html",
     "application/xhtml+xml",
     "application/xml"
@@ -49,24 +52,24 @@ class RewriteBase(Filter):
 
     def __init__(self, request, **kwargs):
         self.absolute_path = '%s://%s%s' %  (
-                request.is_secure() and 'https' or 'http', 
-                request.get_host(), 
+                request.is_secure() and 'https' or 'http',
+                request.get_host(),
                 request.path)
         super(RewriteBase, self).__init__(request, **kwargs)
 
     def setup(self):
         return {'decompress': True}
-        
+
     def rewrite_link(self, link):
         if not absolute_http_url_re.match(link):
             if link.startswith("/"):
                 link = link[1:]
 
-            absolute_path = self.absolute_path 
+            absolute_path = self.absolute_path
             if self.absolute_path.endswith("/"):
                 absolute_path = absolute_path[1:]
 
-            return normalize(absolute_path, link) 
+            return normalize(absolute_path, link)
         return link
 
     def on_response(self, resp, req):
@@ -79,21 +82,21 @@ class RewriteBase(Filter):
         # if this is an html page, parse it
         if ctype in HTML_CTYPES:
             body = resp.body_string()
-           
+
             html = lxml.html.fromstring(body)
 
-            # rewrite links to absolute 
+            # rewrite links to absolute
             html.rewrite_links(self.rewrite_link)
 
             # add base
             old_base = html.find(".//base")
             base = etree.Element("base")
-            base.attrib['href'] = self.absolute_path 
+            base.attrib['href'] = self.absolute_path
 
             if not old_base:
                 head = html.find(".//head")
                 head.append(base)
-            
+
             # modify response
             rewritten_body = lxml.html.tostring(html)
             try:
